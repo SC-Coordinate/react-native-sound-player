@@ -11,8 +11,10 @@ let _finishedPlayingListener = null
 let _finishedLoadingListener = null
 
 module.exports = {
-  playSoundFile: (name: string, type: string) => {
-    RNSoundPlayer.playSoundFile(name, type)
+  playSoundFile: (name: string, type: string, callback: any) => {
+    RNSoundPlayer.playSoundFile(name, type, (err) => {
+      callback(err);
+    })
   },
 
   playUrl: (url: string) => {

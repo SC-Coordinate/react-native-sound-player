@@ -38,13 +38,15 @@ public class RNSoundPlayerModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void playSoundFile(String name, String type) throws IOException {
+  public void playSoundFile(String name, String type, Callback error) throws IOException {
     mountSoundFile(name, type);
-    this.mediaPlayer.start();
+    if (this.mediaPlayer != null) {
+      this.mediaPlayer.start();
+    }
   }
 
   @ReactMethod
-  public void loadSoundFile(String name, String type) throws IOException {
+  public void loadSoundFile(String name, String type, Callback error) throws IOException {
     mountSoundFile(name, type);
   }
 
@@ -119,43 +121,48 @@ public class RNSoundPlayerModule extends ReactContextBaseJavaModule {
         .emit(eventName, params);
   }
 
-  private void mountSoundFile(String name, String type) throws IOException {
-    if (this.mediaPlayer == null) {
-      int soundResID = getReactApplicationContext().getResources().getIdentifier(name, "raw", getReactApplicationContext().getPackageName());
+  private void mountSoundFile(String name, String type, Callback error) throws IOException {
+    try {
+      if (this.mediaPlayer == null) {
+        int soundResID = getReactApplicationContext().getResources().getIdentifier(name, "raw", getReactApplicationContext().getPackageName());
 
-      if (soundResID > 0) {
-        this.mediaPlayer = MediaPlayer.create(getCurrentActivity(), soundResID);
+        if (soundResID > 0) {
+          this.mediaPlayer = MediaPlayer.create(getCurrentActivity(), soundResID);
+        } else {
+          this.mediaPlayer = MediaPlayer.create(getCurrentActivity(), this.getUriFromFile(name, type));
+        }
+
+        this.mediaPlayer.setOnCompletionListener(
+          new OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer arg0) {
+              WritableMap params = Arguments.createMap();
+              params.putBoolean("success", true);
+              sendEvent(getReactApplicationContext(), EVENT_FINISHED_PLAYING, params);
+            }
+        });
       } else {
-        this.mediaPlayer = MediaPlayer.create(getCurrentActivity(), this.getUriFromFile(name, type));
+        Uri uri;
+        int soundResID = getReactApplicationContext().getResources().getIdentifier(name, "raw", getReactApplicationContext().getPackageName());
+
+        if (soundResID > 0) {
+          uri = Uri.parse("android.resource://" + getReactApplicationContext().getPackageName() + "/raw/" + name);
+        } else {
+          uri = this.getUriFromFile(name, type);
+        }
+
+        this.mediaPlayer.reset();
+        this.mediaPlayer.setDataSource(getCurrentActivity(), uri);
+        this.mediaPlayer.prepare();
       }
 
-      this.mediaPlayer.setOnCompletionListener(
-        new OnCompletionListener() {
-          @Override
-          public void onCompletion(MediaPlayer arg0) {
-            WritableMap params = Arguments.createMap();
-            params.putBoolean("success", true);
-            sendEvent(getReactApplicationContext(), EVENT_FINISHED_PLAYING, params);
-          }
-      });
-    } else {
-      Uri uri;
-      int soundResID = getReactApplicationContext().getResources().getIdentifier(name, "raw", getReactApplicationContext().getPackageName());
-
-      if (soundResID > 0) {
-        uri = Uri.parse("android.resource://" + getReactApplicationContext().getPackageName() + "/raw/" + name);
-      } else {
-        uri = this.getUriFromFile(name, type);
-      }
-
-      this.mediaPlayer.reset();
-      this.mediaPlayer.setDataSource(getCurrentActivity(), uri);
-      this.mediaPlayer.prepare();
+      WritableMap params = Arguments.createMap();
+      params.putBoolean("success", true);
+      sendEvent(getReactApplicationContext(), EVENT_FINISHED_LOADING, params);
+    } 
+    catch (Exception ex){
+      error.invoke("Unexpected error"+ex.getMessage());
     }
-
-    WritableMap params = Arguments.createMap();
-    params.putBoolean("success", true);
-    sendEvent(getReactApplicationContext(), EVENT_FINISHED_LOADING, params);
   }
 
   private Uri getUriFromFile(String name, String type) {
