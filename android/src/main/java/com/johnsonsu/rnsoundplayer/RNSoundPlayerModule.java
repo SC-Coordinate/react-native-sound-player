@@ -39,7 +39,7 @@ public class RNSoundPlayerModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void playSoundFile(String name, String type, Callback error) throws IOException {
-    mountSoundFile(name, type);
+    mountSoundFile(name, type, error);
     if (this.mediaPlayer != null) {
       this.mediaPlayer.start();
     }
@@ -47,7 +47,7 @@ public class RNSoundPlayerModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void loadSoundFile(String name, String type, Callback error) throws IOException {
-    mountSoundFile(name, type);
+    mountSoundFile(name, type, error);
   }
 
   @ReactMethod
